@@ -5,17 +5,10 @@ import tinygrad
 import tinygrad.tensor
 from tinygrad.helpers import dedup
 
-@dataclass(eq=False, frozen=True)
+@dataclass(eq=True, frozen=True)
 class Dim:
   name: str
   size: int
-
-  def __new__(cls, name:str, size:int):
-    if name in dimdict: assert dimdict[name].size==size, f'{name} already defined as {dimdict[name]}'
-    else: dimdict[name] = super().__new__(cls)
-    return dimdict[name]
-
-  def __repr__(self): return f'Dim("{self.name}", {self.size})'
 
 dimdict:dict[str, Dim] = {}
 
@@ -27,6 +20,9 @@ class Shape():
   
   def __repr__(self): return f'Shape({", ".join([f"{d.name}={d.size}" for d in self.dims])})'
   def __iter__(self): return (d for d in self.dims)
+
+  def __eq__(self, other):
+    return self.dims == other.dims
   
   @property
   def size(self): return tuple([d.size for d in self.dims])
@@ -46,9 +42,6 @@ class Tensor:
   def numpy(self): return self.tensor.numpy()
 
   def __repr__(self): return f'<Tensor {self.shape} {self.tensor.dtype} device={self.tensor.device}>'
-
-  def sum(self) -> float:
-    return self.tensor.sum().numpy().item()
 
   def __add__(self, other: 'Tensor'):
     return Tensor(self.shape, self.tensor + other.tensor)
@@ -87,7 +80,7 @@ class Tensor:
   def __sub__(self, other: 'Tensor'): return self.binary_fn(other, tinygrad.Tensor.sub)
   def __mul__(self, other: 'Tensor'): return self.binary_fn(other, tinygrad.Tensor.mul)
   def __truediv__(self, other: 'Tensor'): return self.binary_fn(other, tinygrad.Tensor.div)
-  def __matmul__(self, other: 'Tensor'): 
+  def __matmul__(self, other: 'Tensor')->'Tensor':
     reduce_dim = [d for d in self.shape.dims if d.name in other.shape.keys][0]
     return (self * other).sum(reduce_dim)
 
@@ -99,13 +92,17 @@ class Tensor:
       return Tensor(Shape(*[d for i,d in enumerate(self.shape.dims) if i not in axes]), fn(self.tensor, axes))
     return reduce
   
-  sum, max, min = map(reduce_fn, [tinygrad.Tensor.sum, tinygrad.Tensor.max, tinygrad.Tensor.min])
+  sum = reduce_fn(tinygrad.Tensor.sum)
+  max, min = map(reduce_fn, [tinygrad.Tensor.max, tinygrad.Tensor.min])
   argmax, argmin, mean, softmax = map(reduce_fn, [tinygrad.Tensor.argmax, tinygrad.Tensor.argmin, tinygrad.Tensor.mean, tinygrad.Tensor.softmax])
 
   def permute(self, *dims: Dim):
     for d in dims: assert d in self.shape.dims, f'{d} not in {self.shape}'
     perm = [self.shape.keys.index(d.name) for d in dims]
     return Tensor(Shape(*dims), self.tensor.permute(*perm))
+  
+  @property
+  def T(self): return self.permute(*self.shape.dims[:2:-1])
 
   def expand(self, *dims: Dim):
     dims = tuple(d if d not in self.shape.dims else Dim("_"+d.name,d.size) for d in dims)

@@ -1,19 +1,17 @@
 import unittest
-from tinygrad import Tensor, GlobalCounters
-from tinygrad.helpers import Context
+from tinsor import Dim
 
-class TestArange(unittest.TestCase):
-  def _get_flops(self, N):
-    GlobalCounters.reset()
-    with Context(NOOPT=1):
-      Tensor.arange(N).realize()
-    return GlobalCounters.global_ops
+class TestDim(unittest.TestCase):
+  def test_dim(self):
+    A = Dim('A', 3)
 
-  def test_complexity(self):
-    f1 = self._get_flops(256)
-    f2 = self._get_flops(2560)
-    print(f"{f1=}, {f2=}")
-    assert f2 / f1 < 15, f"bad complexity, flops {f2/f1:.1f}X while inputs 10X"
+    assert A.size == 3
+    assert A.name == 'A'
 
-if __name__ == "__main__":
-  unittest.main()
+    A2 = Dim('A', 3)
+
+    assert A2 == A
+
+
+    B = Dim('B', 3)
+    assert A != B
