@@ -1,17 +1,24 @@
 
-## you like [tinygrad](https://github.com/tinygrad/tinygrad)? you know [einsum notation](https://rockt.github.io/2018/04/30/einsum)?
+## you like [tinygrad](https://github.com/tinygrad/tinygrad)? you know [einsum notation](https://rockt.github.io/2018/04/30/einsum)? than you could use tinsor
 
-This tensor frontend will take care of all unsqueese / permutes you need
+This tensor frontend will take care of all unsqueese / permutes / expand you need
 
 
 ```python
-# define your data dimensions
+from tinsor import Shape, Tensor
+
 S, T, U, V = Shape(S=5, T=3, U=4, V=6)
 
-# create completely different tensors
-x = S.T.U.ones()
-y = U.V.S.rand()
+x = Tensor.ones(S, T) # (S=5, T=3)
+y = Tensor.rand(T, U) # (T=3, U=4)
 
-# let tinsor match the dimensions new shape: (S=5, T=3, U=4, V=6)
-x * y
+p = x * y             # (S=5, T=3, U=4)
+
+print(p.numpy().shape) # (5, 3, 4)
+```
+
+### install
+
+```bash
+pip install -e .
 ```

@@ -1,1 +1,1 @@
-from tinsor.tensor import Shape
+from tinsor.tensor import Shape, Tensor, Dim

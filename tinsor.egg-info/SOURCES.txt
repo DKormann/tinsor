@@ -1,0 +1,10 @@
+README.md
+setup.py
+test/test_dim.py
+tinsor/__init__.py
+tinsor/tensor.py
+tinsor.egg-info/PKG-INFO
+tinsor.egg-info/SOURCES.txt
+tinsor.egg-info/dependency_links.txt
+tinsor.egg-info/requires.txt
+tinsor.egg-info/top_level.txt
