@@ -1,22 +1,39 @@
 #%%
 from dataclasses import dataclass
+from typing import Any
 import tinygrad
 import tinygrad.tensor
 
 # %%
-
 @dataclass(eq=False, frozen=True)
+class Dim:
+  name: str
+  size: int
+
+  def __repr__(self): return f'Dim("{self.name}", {self.size})'
+  def __getattribute__(self, name: str) -> Any:
+    try: return super().__getattribute__(name)
+    except AttributeError: return Shape(self).__getattr__(name)
+  
+
+dimdict = {}
+def dim(name:str, n:int):
+  assert name not in ['name', 'size'], f'{name} is a reserved name'
+  assert name not in dimdict, f'{name} already defined'
+  dimdict[name] = Dim(name, n)
+  return dimdict[name]
+
 class Shape():
-  shape: tuple[tuple[str, int]] = ()
+  dims: tuple[Dim]
+
+  def __init__(self,*dims,**kwargs):
+    self.dims = dims + tuple(dim(k, v) for k,v in kwargs.items())
   
-  def __repr__(self):
-    return f'Shape[{", ".join([f"{k}:{v}" for k,v in self.shape])}]'
-  
-  def __iter__(self):
-    return tuple(Shape({k:v}) for k,v in self.shape)
+  def __repr__(self): return f'Shape({", ".join([f"{d.name}={d.size}" for d in self.dims])})'
+  def __iter__(self): return (d for d in self.dims)
   
   @property
-  def size(self): return tuple([v for k,v in self.shape])
+  def size(self): return tuple([d.size for d in self.dims])
 
   @property
   def keys(self): return [k for k,v in self.shape]
@@ -26,24 +43,22 @@ class Shape():
   def zeros(self): return EinTensor(self, tinygrad.Tensor.zeros(self.size))
   def eye(self): return EinTensor(self, tinygrad.Tensor.eye(self.size[0]))
 
-  def __getattr__(self, key):
-    val = globals()[key].shape
-    assert len(val) == 1, f'{key} is not a scalar'
-    while key in self.keys: key = '_' + key
-    return Shape(self.shape + ((key, val[0][1]),))
+  def __getattr__(self, key): return Shape(*self.dims,dimdict[key])
 
   
-def shape(**kwargs):
-  return Shape(tuple(kwargs.items()))
+def shape(**kwargs): return Shape(tuple (Dim(k,v) for k,v in kwargs.items()))
 
-@dataclass(eq=False, frozen=True)
 class EinTensor:
   shape: Shape
   tensor: tinygrad.Tensor
 
+  def __init__(self, shape: Shape, tensor: tinygrad.Tensor):
+    self.shape = shape
+    self.tensor = tensor
+
   def numpy(self): return self.tensor.numpy()
 
-  def __repr__(self): return f'Tensor[{", ".join([f"{k}:{v}" for k,v in self.shape.shape])}]'
+  def __repr__(self): return f'<Tensor {self.shape} {self.tensor.dtype} device={self.tensor.device}>'
 
   def __getattr__(self, key):
     for k,v in self.shape.shape:
@@ -56,10 +71,14 @@ class EinTensor:
     newshape = tuple((k,v) for k,v in self.shape.shape if k not in axis.keys)
     return EinTensor(Shape(newshape), self.tensor.sum(axes))
 
-T, U = shape(T=4, U=3)
+  def __add__(self, other: 'EinTensor'):
+    return EinTensor(self.shape, self.tensor + other.tensor)
 
-x = T.U.rand()
-z = T.U.ones()
 
-z.sum(T).numpy()
+T, U = Shape(U=3, T=4)
+
+tensor = T.U.ones()
+
+print(tensor)
+
 
