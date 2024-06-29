@@ -11,15 +11,15 @@ class Dim:
   size: int
 
   def __repr__(self): return f'Dim("{self.name}", {self.size})'
-  def __getattribute__(self, name: str) -> Any:
+  def __getattribute__(self, name: str) -> 'Shape':
     try: return super().__getattribute__(name)
     except AttributeError: return Shape(self).__getattr__(name)
   
 
-dimdict = {}
+dimdict:dict[str, Dim] = {}
 def dim(name:str, n:int):
   assert name not in ['name', 'size'], f'{name} is a reserved name'
-  assert name not in dimdict, f'{name} already defined'
+  assert name not in dimdict or dimdict[name].size==n, f'{name} already defined as {dimdict[name]}'
   dimdict[name] = Dim(name, n)
   return dimdict[name]
 
@@ -45,8 +45,6 @@ class Shape():
 
   def __getattr__(self, key): return Shape(*self.dims,dimdict[key])
 
-  
-def shape(**kwargs): return Shape(tuple (Dim(k,v) for k,v in kwargs.items()))
 
 class EinTensor:
   shape: Shape
@@ -65,20 +63,8 @@ class EinTensor:
       if k == key: return v
     raise AttributeError(f'{key} not found in {self.shape}')
 
-  def sum(self, axis:Shape):
-    for k in axis.keys: assert k in self.shape.keys, f'{k} not in {self.shape}'
-    axes = [self.shape.keys.index(k) for k in axis.keys]
-    newshape = tuple((k,v) for k,v in self.shape.shape if k not in axis.keys)
-    return EinTensor(Shape(newshape), self.tensor.sum(axes))
+  def sum(self) -> float:
+    return self.tensor.sum().numpy().item()
 
   def __add__(self, other: 'EinTensor'):
     return EinTensor(self.shape, self.tensor + other.tensor)
-
-
-T, U = Shape(U=3, T=4)
-
-tensor = T.U.ones()
-
-print(tensor)
-
-

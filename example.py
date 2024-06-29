@@ -1,16 +1,10 @@
 #%%
-from eintensor import shape
+from tinsor import Shape
 
+T, U = Shape(T=3, U=4)
 
-T, U = shape(T=3, U=4)
+w = T.U.rand() # random tensor
 
-T, U
+w.sum() # float
 
-x = T.U.ones()
-w = T.U.rand()
-
-square = T.T.ones()
-
-res = x + w
-
-res.shape
+w + w # tensor
