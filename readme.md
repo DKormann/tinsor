@@ -23,4 +23,4 @@ print(p.numpy().shape) # (5, 3, 4)
 pip install -e .
 ```
 
-formerly known as [tinsorchflow](https://www.youtube.com/watch?v=dQw4w9WgXcQ).
+formerly known as [tinsorchflow](https://www.youtube.com/watch?v=j5a0jTc9S10).
