@@ -1,8 +1,10 @@
 #%%
 from dataclasses import dataclass
+
 from typing import Any
 import tinygrad
 import tinygrad.tensor
+from tinygrad.helpers import dedup
 
 # %%
 @dataclass(eq=False, frozen=True)
@@ -14,13 +16,11 @@ class Dim:
   def __getattribute__(self, name: str) -> 'Shape':
     try: return super().__getattribute__(name)
     except AttributeError: return Shape(self).__getattr__(name)
-  
 
 dimdict:dict[str, Dim] = {}
 def dim(name:str, n:int):
-  assert name not in ['name', 'size'], f'{name} is a reserved name'
-  assert name not in dimdict or dimdict[name].size==n, f'{name} already defined as {dimdict[name]}'
-  dimdict[name] = Dim(name, n)
+  if name in dimdict: assert dimdict[name].size==n, f'{name} already defined as {dimdict[name]}'
+  else: dimdict[name] = Dim(name, n)
   return dimdict[name]
 
 class Shape():
@@ -36,7 +36,7 @@ class Shape():
   def size(self): return tuple([d.size for d in self.dims])
 
   @property
-  def keys(self): return [k for k,v in self.shape]
+  def keys(self): return [d.name for d in self.dims]
   
   def ones(self): return EinTensor(self, tinygrad.Tensor.ones(self.size))
   def rand(self): return EinTensor(self, tinygrad.Tensor.rand(self.size))
@@ -44,7 +44,6 @@ class Shape():
   def eye(self): return EinTensor(self, tinygrad.Tensor.eye(self.size[0]))
 
   def __getattr__(self, key): return Shape(*self.dims,dimdict[key])
-
 
 class EinTensor:
   shape: Shape
@@ -58,13 +57,45 @@ class EinTensor:
 
   def __repr__(self): return f'<Tensor {self.shape} {self.tensor.dtype} device={self.tensor.device}>'
 
-  def __getattr__(self, key):
-    for k,v in self.shape.shape:
-      if k == key: return v
-    raise AttributeError(f'{key} not found in {self.shape}')
-
   def sum(self) -> float:
     return self.tensor.sum().numpy().item()
 
   def __add__(self, other: 'EinTensor'):
     return EinTensor(self.shape, self.tensor + other.tensor)
+
+
+  def binary_fn(self, other: 'EinTensor', fn: Any) -> 'EinTensor':
+    newshape = Shape(*dedup(self.shape.dims + other.shape.dims))
+
+    stensor = self.tensor
+    otensor = other.tensor
+
+    for k in newshape.keys:
+      if k not in self.shape.keys: stensor = stensor.unsqueeze(-1)
+      if k not in other.shape.keys: otensor = otensor.unsqueeze(-1)
+
+    last = len(newshape.keys)
+    perm = [other.shape.keys.index(k) if k in other.shape.keys else (last:=last-1) for k in newshape.keys]
+    otensor = otensor.permute(*perm)
+
+    last = len(newshape.keys)
+    perm = [self.shape.keys.index(k) if k in self.shape.keys else (last:=last-1) for k in newshape.keys]
+    stensor = stensor.permute(*perm)
+
+    return EinTensor(newshape, fn(stensor, otensor))
+  
+  def __add__(self, other: 'EinTensor'): return self.binary_fn(other, tinygrad.Tensor.add)
+  def __sub__(self, other: 'EinTensor'): return self.binary_fn(other, tinygrad.Tensor.sub)
+  def __mul__(self, other: 'EinTensor'): return self.binary_fn(other, tinygrad.Tensor.mul)
+  def __truediv__(self, other: 'EinTensor'): return self.binary_fn(other, tinygrad.Tensor.div)
+  
+    
+S, T, U, V = Shape(S=5, T=3, U=4, V=6)
+
+x = S.T.U.ones()
+y = U.V.S.rand()
+
+
+x * y
+
+

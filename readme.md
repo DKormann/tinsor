@@ -7,9 +7,9 @@ from tinsor import Shape
 
 T, U = Shape(T=3, U=4)
 
-w = T.U.rand() # random tensor
+w = T.U.rand() # random tensor [T, U]
 
 w.sum() # float
 
-w + w # tensor
+w + w # tensor [T, U]
 ```

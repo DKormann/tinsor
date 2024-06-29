@@ -8,3 +8,6 @@ w = T.U.rand() # random tensor
 w.sum() # float
 
 w + w # tensor
+
+
+
