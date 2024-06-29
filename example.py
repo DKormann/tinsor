@@ -1,13 +1,9 @@
 #%%
 from tinsor import Shape
 
-T, U = Shape(T=3, U=4)
+S, T, U, V = Shape(S=5, T=3, U=4, V=6)
 
-w = T.U.rand() # random tensor
+x = S.T.U.ones()
+y = U.V.S.rand()
 
-w.sum() # float
-
-w + w # tensor
-
-
-
+x * y
