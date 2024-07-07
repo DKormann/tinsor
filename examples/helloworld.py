@@ -14,4 +14,3 @@ print(p)
 p = x * y
 
 print(p)
-

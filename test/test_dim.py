@@ -12,6 +12,5 @@ class TestDim(unittest.TestCase):
 
     assert A2 == A
 
-
     B = Dim('B', 3)
     assert A != B

@@ -10,12 +10,11 @@ class Dim:
   name: str
   size: int
 
-dimdict:dict[str, Dim] = {}
-
 class Shape():
   dims: tuple[Dim]
 
   def __init__(self,*dims,**kwargs):
+    dims = tuple(Dim(f"_{d}", d) if isinstance(d, int) else d for d in dims)
     self.dims = dims + tuple(Dim(k, v) for k,v in kwargs.items())
   
   def __repr__(self): return f'Shape({", ".join([f"{d.name}={d.size}" for d in self.dims])})'
@@ -101,8 +100,20 @@ class Tensor:
     perm = [self.shape.keys.index(d.name) for d in dims]
     return Tensor(Shape(*dims), self.tensor.permute(*perm))
   
-  @property
-  def T(self): return self.permute(*self.shape.dims[:2:-1])
+  # @property
+  # def T(self): return self.transpose()
+
+  def transpose(self, dim1 = None, dim2 = None):
+    dim1, dim2 = dim1 or 1, dim2 or 0
+    order = list(self.shape.dims)
+    order[dim1], order[dim2] = order[dim2], order[dim1]
+    return self.permute(*order)
+
+  def __getattr__(self, name):
+    if self.shape.keys[0] == name: return self
+    idx = [i for i,d in enumerate(self.shape) if d.name == name][0]
+    return self.transpose(idx)
+
 
   def expand(self, *dims: Dim):
     dims = tuple(d if d not in self.shape.dims else Dim("_"+d.name,d.size) for d in dims)
